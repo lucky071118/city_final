@@ -14,9 +14,11 @@ from sklearn.svm import OneClassSVM
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import confusion_matrix
 
+from one_class_classification_via_neural_networks import OneClassClassificationViaNeuralNetworks
+
 DIR_PATH = 'data'
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), DIR_PATH, '1070106.csv')
-DATA_INDEX = [1, 2, 5, 6, 7, 13, 17, 22, 60, 62, 64, 66, 67, 69, 71, 73, 77, 87, 91, 95, 97, 99]
+DATA_INDEX = [1, 2, 5, 6, 7, 13, 60, 62, 64, 66, 67, 69, 71, 73, 77, 87, 91, 95, 97, 99]
 NOT_ENCODING_INDEX = [0, 1, 2, 3, 4, 11]
 
 NOT_ENCODING_INDEX_LIST = [
@@ -29,9 +31,9 @@ NOT_ENCODING_INDEX_LIST = [
 ]
 
 # ' 發生地址_路街代碼',
+# ' 發生市區鄉鎮代碼',
 ENCODING_INDEX_LIST = [
     ' 地址類型代碼',
-    ' 發生市區鄉鎮代碼',
     ' 天候代碼',
     ' 光線代碼',
     ' 道路類別(第1當事者)代碼',
@@ -78,7 +80,7 @@ def preprocess():
     data_frame = data_csv.iloc[ : , DATA_INDEX]
 
     # Delete the missing data
-    data_frame = data_frame[data_frame[' 發生地址_路街代碼'] != ' ']
+    # data_frame = data_frame[data_frame[' 發生地址_路街代碼'] != ' ']
     data_frame = data_frame[(data_frame[' 地址類型代碼'] == 1) | (data_frame[' 地址類型代碼'] == 2)]
 
     # integer
@@ -127,13 +129,17 @@ def preprocess():
     column_list = data_frame.columns.tolist()
     pprint.pprint(column_list)
     print('Feature number', len(column_list))
-
+    # print(data_frame)
+    # os.system('pause')
     return data_frame
 
 
 
 
-def train(data_set):
+def train(data_frame):
+    data_set = data_frame.values
+    column_list = data_frame.columns.tolist()
+    feature_number = len(column_list)
     x_train, x_test = train_test_split(data_set)
     print('Training data size', len(x_train))
     print('Testing data size', len(x_test))
@@ -142,18 +148,32 @@ def train(data_set):
 
     # GaussianMixture
     # model = GaussianMixture()
+    # model.fit(x_train)
+    # y_pred = model.predict(x_test)
 
     # OneClassSVM
-    # kernel = linear, poly, rbf, sigmoid, precomputed
-    model = OneClassSVM(kernel='rbf')
-    model.fit(x_train)
+    # model = OneClassSVM(kernel='linear',nu=0.1)
+    # model.fit(x_train)
+    # y_pred = model.predict(x_test)
+    # print(y_pred)
 
-    # Test
-    y_pred = model.predict(x_test)
-    print(y_pred)
+
+
+    # OneClassClassificationViaNeuralNetworks
+    model = OneClassClassificationViaNeuralNetworks(feature_number)
+    model.fit(x_train)
+    predict_x_test = model.predict(x_test)
+    y_pred = model.compute_score(x_test, predict_x_test)
+    # print(y_pred)
+
+
+    # Result
     y_test = np.ones(len(x_test))
     cm = confusion_matrix(y_test, y_pred)
     print('confusion matrix', cm)
+
+
+
     (true_negative, false_positive, false_negative, true_positive) = np.ravel(cm)
     total = true_negative + false_positive + false_negative + true_positive
     accuracy = (true_negative + true_positive)/total
@@ -172,7 +192,7 @@ if __name__ == '__main__':
     data_frame = preprocess()
     print('='*20, 'Training Time', '='*20)
     time_b = datetime.datetime.now()
-    train(data_frame.values)
+    train(data_frame)
     time_c = datetime.datetime.now()
     print('The preprocessing time is', time_b - time_a)
     print('The training time is', time_c - time_b)
